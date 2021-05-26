@@ -12,20 +12,9 @@
         <div class="row">
             <div class="col-md-6 offset-md-3 col-sm-12">
                 <h1 class="text-center">
-                    MongoChat 
-                    <button id="clear" class="btn btn-danger">Clear</button>
+                    MongoChat
                 </h1>
-                <div id="status"></div>
-                <div id="chat">
-                    <input type="text" id="username" class="form-control" placeholder="Enter name...">
-                    <br>
-                    <div class="card">
-                        <div id="messages" class="card-block">
-
-                        </div>
-                    </div>
-                    <br>
-                    <textarea id="textarea" class="form-control" placeholder="Enter message..."></textarea>
+                <div class="container" id="all-users">
                 </div>
             </div>
         </div>
@@ -34,6 +23,10 @@
     <script src="https://cdn.socket.io/4.1.1/socket.io.min.js" integrity="sha384-cdrFIqe3RasCMNE0jeFG9xJHog/tgOVC1E9Lzve8LQN1g5WUHo0Kvk1mawWjxX7a" crossorigin="anonymous"></script>
     <script src="./scripts/config.js"></script>
     <script>
+        const redirect = (username) => {
+          location.href = './chat.html#' + username.slice(1);
+        }
+
         (function(){
             // Connect to socket.io
             var socket = io(WS_URL);
@@ -41,8 +34,19 @@
             if(socket !== undefined){
                 console.log('Connected to socket...');
                 // Handle Output
-                socket.emit('view-all');
-                socket.on('view-all', function(data) {
+                socket.emit('viewAllUsers', localStorage.getItem('username'));
+                socket.on('showAllUsers', function(data) {
+                  data.map(user => {
+                  document.getElementById('all-users').innerHTML += `
+                    <div class="card px-3 py-2 mb-2 bg-white rounded" onclick="redirect('${user.username}')">
+                      <div class="row">
+                        <div class="col-3">
+                          <img src="${user.image}" width=75px class="rounded">
+                        </div>
+                        <div class="col-6 my-auto mx-0">${user.username}</div>
+                        </div>
+                    </div>`
+                  })
                   console.log(data);
                 })
             }

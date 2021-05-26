@@ -54,7 +54,7 @@ client.on('connection', async function (socket) {
       );
     });
 
-    socket.emit('showChat', chats);
+    socket.emit('showChat', { receiver, chats });
   });
 
   // Handle input events
@@ -91,10 +91,8 @@ client.on('connection', async function (socket) {
 
       socket.join(roomId);
 
-      console.log([chat]);
-
       // Send users and room info
-      client.to(roomId).emit('showChat', [chat]);
+      client.to(roomId).emit('showChat', { receiver, chats: [chat] });
     }
   });
 
@@ -105,7 +103,14 @@ client.on('connection', async function (socket) {
     socket.emit('cleared');
   });
 
-  socket.on('view-all', function (data) {
-    socket.emit('view-all', 'hey');
+  socket.on('viewAllUsers', async function (username) {
+    let users = await User.find({ username: { $ne: username } });
+    users = users.map((user) => {
+      return {
+        username: '@' + user.username,
+        image: user.image,
+      };
+    });
+    socket.emit('showAllUsers', users);
   });
 });

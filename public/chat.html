@@ -4,27 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
     <title>MongoChat</title>
     <style>
-        #messages{height:300px;}
+        #messages{height:70vh;}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="row">
             <div class="col-md-6 offset-md-3 col-sm-12">
-                <h1 class="text-center">
-                    MongoChat 
-                    <button id="clear" class="btn btn-danger">Clear</button>
-                </h1>
+                <div class="row my-3">
+                    <div class="col-3">
+                      <img src="" id="receiver-image" width=75px style="border-radius: 75px">
+                    </div>
+                    <div class="col-6 my-auto mx-0 h1" id="receiver-username"></div>
+                </div>
                 <div id="status"></div>
                 <div id="chat">
-                    <input type="text" id="username" class="form-control" placeholder="Enter name...">
-                    <br>
                     <div class="card">
-                        <div id="messages" class="card-block">
-
+                        <div id="messages" class="overflow-auto p-3">
                         </div>
                     </div>
                     <br>
@@ -46,15 +45,13 @@
             var status = element('status');
             var messages = element('messages');
             var textarea = element('textarea');
-            var username = element('username');
-            var clearBtn = element('clear');
 
             // Set default status
             var statusDefault = status.textContent;
 
             var setStatus = function(s){
                 // Set status
-                status.textContent = s;
+                // status.textContent = s;
 
                 if(s !== statusDefault){
                     var delay = setTimeout(function(){
@@ -74,18 +71,23 @@
                 socket.emit('viewOne', { from: localStorage.getItem('username'), to: location.hash.slice(1) });
                 socket.emit('openChat', { from: localStorage.getItem('username'), to: location.hash.slice(1) });
                 socket.on('notify', function(data) {
-                  alert(data);
+                  // alert(data);
                 })
                 socket.on('showChat', function(data){
-                    console.log(data);
+                    element('receiver-image').setAttribute('src', data.receiver.image);
+                    element('receiver-username').innerText = '@' + data.receiver.username;
+                    console.log(data)
+                    data = data.chats;
                     if(data.length){
                         for(var x = 0;x < data.length;x++){
                             // Build out message div
-                            var message = document.createElement('div');
-                            message.setAttribute('class', 'chat-message');
-                            message.textContent = data[x].from.username+": "+data[x].message;
-                            messages.appendChild(message);
-                            messages.insertBefore(message, messages.firstChild);
+                          let fromSelf = data[x].from.username === localStorage.getItem('username');
+                          messages.innerHTML += `
+                            <div class="d-flex flex-column align-items-${fromSelf ? 'end' : 'start'}">
+                            <div class="d-inline-flex card ${fromSelf ? 'border-primary' : 'bg-primary text-white'} p-2 mb-1"  style="max-width: 18rem;">${data[x].message}</div>
+                            </div>
+                            `
+                          messages.scrollTop = messages.scrollHeight;
                         }
                     }
                 });
@@ -117,15 +119,6 @@
                     }
                 })
 
-                // Handle Chat Clear
-                clearBtn.addEventListener('click', function(){
-                    socket.emit('clear');
-                });
-
-                // Clear Message
-                socket.on('cleared', function(){
-                    messages.textContent = '';
-                });
             }
 
         })();
