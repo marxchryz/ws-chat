@@ -42,23 +42,8 @@
             }
 
             // Get Elements
-            var status = element('status');
             var messages = element('messages');
             var textarea = element('textarea');
-
-            // Set default status
-            var statusDefault = status.textContent;
-
-            var setStatus = function(s){
-                // Set status
-                // status.textContent = s;
-
-                if(s !== statusDefault){
-                    var delay = setTimeout(function(){
-                        setStatus(statusDefault);
-                    }, 4000);
-                }
-            }
 
             // Connect to socket.io
             var socket = io(WS_URL);
@@ -69,13 +54,11 @@
 
                 // Handle Output
                 socket.emit('viewOne', { from: localStorage.getItem('username'), to: location.hash.slice(1) });
-                socket.emit('openChat', { from: localStorage.getItem('username'), to: location.hash.slice(1) });
-                socket.on('notify', function(data) {
-                  // alert(data);
-                })
                 socket.on('showChat', function(data){
+                  if(data.first) {
                     element('receiver-image').setAttribute('src', data.receiver.image);
                     element('receiver-username').innerText = '@' + data.receiver.username;
+                  }
                     console.log(data)
                     data = data.chats;
                     if(data.length){
@@ -89,17 +72,6 @@
                             `
                           messages.scrollTop = messages.scrollHeight;
                         }
-                    }
-                });
-
-                // Get Status From Server
-                socket.on('status', function(data){
-                    // get message status
-                    setStatus((typeof data === 'object')? data.message : data);
-
-                    // If status is clear, clear text
-                    if(data.clear){
-                        textarea.value = '';
                     }
                 });
 
@@ -118,9 +90,7 @@
                         event.preventDefault();
                     }
                 })
-
             }
-
         })();
     </script>
 </body>

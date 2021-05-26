@@ -38,17 +38,36 @@
                 socket.on('showAllUsers', function(data) {
                   data.map(user => {
                   document.getElementById('all-users').innerHTML += `
-                    <div class="card px-3 py-2 mb-2 bg-white rounded" onclick="redirect('${user.username}')">
+                    <div class="card px-3 py-2 mb-2 bg-white rounded" id="user-${user.username}" onclick="redirect('${user.username}')">
                       <div class="row">
                         <div class="col-3">
                           <img src="${user.image}" width=75px class="rounded">
                         </div>
-                        <div class="col-6 my-auto mx-0">${user.username}</div>
+                        <div class="col-6 my-auto mx-0">${user.username}<br><span class="text-muted">${user.latestMessage}</span></div>
                         </div>
                     </div>`
                   })
                   console.log(data);
                 })
+              socket.on('newMessage', function(data) {
+                let fromSelf = data.sender.username === localStorage.getItem('username');
+                let id = fromSelf ? data.receiver.username : data.sender.username;
+                let image = fromSelf ? data.receiver.image : data.sender.image;
+                let username = data.sender.username;
+                let message = data.chats[0].message;
+
+                console.log(data);
+                document.getElementById('user-@'+id).remove();
+                document.getElementById('all-users').innerHTML = `
+                   <div class="card px-3 py-2 mb-2 bg-white rounded" id="user-@${id}" onclick="redirect('${id}')">
+                      <div class="row">
+                        <div class="col-3">
+                          <img src="${image}" width=75px class="rounded">
+                        </div>
+                        <div class="col-6 my-auto mx-0">${username}<br><span class="text-muted">${message}</span></div>
+                        </div>
+                    </div>`+document.getElementById('all-users').innerHTML
+              });
             }
         })();
     </script>

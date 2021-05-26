@@ -16,23 +16,6 @@ require('./startup/db')();
 
 // Connect to Socket.io
 client.on('connection', async function (socket) {
-  // Create function to send status
-  sendStatus = function (s) {
-    socket.emit('status', s);
-  };
-
-  socket.on('openChat', async (data) => {
-    const { from, to = '' } = data;
-    let roomId =
-      data.from > data.to ? data.from + data.to : data.to + data.from;
-
-    socket.join(roomId);
-
-    // Send users and room info
-    client.to(roomId).emit('notify', 'The user opened your chat');
-    // console.log(roomId);
-  });
-
   // Get chats from mongo collection
   socket.on('viewOne', async function (data) {
     let roomId =
@@ -45,7 +28,6 @@ client.on('connection', async function (socket) {
     let receiver = await User.findOne({ username: data.to });
 
     chats = chats.filter((chat) => {
-      // console.log(chat);
       return (
         chat.from &&
         chat.to &&
@@ -54,7 +36,7 @@ client.on('connection', async function (socket) {
       );
     });
 
-    socket.emit('showChat', { receiver, chats });
+    socket.emit('showChat', { receiver, chats, first: true });
   });
 
   // Handle input events
@@ -64,53 +46,82 @@ client.on('connection', async function (socket) {
     let receiver = await User.findOne({ username: to });
     let sender = await User.findOne({ username: from });
 
-    // Check for name and message
-    if (message == '') {
-      // Send error status
-      sendStatus('Please enter a message');
-    } else {
-      // Insert message
-      let chat = await Chat.create({
-        from: sender._id,
-        to: receiver._id,
-        message,
-      });
+    // Insert message
+    let chat = await Chat.create({
+      from: sender._id,
+      to: receiver._id,
+      message,
+    });
 
-      chat = await chat
-        .populate('from', ['username'])
-        .populate('to', ['username'])
-        .execPopulate();
+    chat = await chat
+      .populate('from', ['username'])
+      .populate('to', ['username'])
+      .execPopulate();
 
-      // client.emit('output', [chat]);
-      // Send status object
-      sendStatus({
-        message: 'Message sent',
-        clear: true,
-      });
-      let roomId = from > to ? from + to : to + from;
+    // Send status object
+    let roomId = from > to ? from + to : to + from;
 
-      socket.join(roomId);
+    socket.join(roomId);
 
-      // Send users and room info
-      client.to(roomId).emit('showChat', { receiver, chats: [chat] });
-    }
-  });
+    // Send users and room info
+    client.to(roomId).emit('showChat', { receiver, chats: [chat] });
 
-  // Handle clear
-  socket.on('clear', async function (data) {
-    // Remove all chats from collection
-    await Chat.deleteMany({});
-    socket.emit('cleared');
+    chat.message = from + ': ' + chat.message;
+    socket.in(roomId).emit('newMessage', { receiver, sender, chats: [chat] });
   });
 
   socket.on('viewAllUsers', async function (username) {
     let users = await User.find({ username: { $ne: username } });
+    let current = await User.findOne({ username });
     users = users.map((user) => {
+      let roomId =
+        username > user.username
+          ? username + user.username
+          : user.username + username;
+      socket.join(roomId);
       return {
+        _id: user._id,
         username: '@' + user.username,
         image: user.image,
       };
     });
+
+    let chats = await Chat.find(
+      {
+        $or: [{ from: current._id }, { to: current._id }],
+      },
+      null,
+      { sort: { _id: -1 } }
+    )
+      .populate('from')
+      .populate('to');
+
+    console.log(chats);
+
+    users = users.map((user) => {
+      let latestMessage = '',
+        latestMessageId = '';
+      chats.map((chat) => {
+        if (
+          !latestMessage &&
+          chat &&
+          [chat.from._id.toString(), chat.to._id.toString()].includes(
+            user._id.toString()
+          )
+        ) {
+          latestMessage = chat.from.username + ': ' + chat.message;
+          latestMessageId = chat._id;
+        }
+      });
+      return { ...user, latestMessage, latestMessageId };
+    });
+
+    console.log(users);
+
+    users.sort((a, b) => {
+      return a.latestMessageId > b.latestMessageId ? -1 : 1;
+    });
+
     socket.emit('showAllUsers', users);
   });
 });
