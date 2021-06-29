@@ -57,7 +57,7 @@
                 let message = data.chats[0].message;
 
                 console.log(data);
-                document.getElementById('user-@'+id).remove();
+                document.getElementById('user-@'+id)?.remove();
                 document.getElementById('all-users').innerHTML = `
                    <div class="card px-3 py-2 mb-2 bg-white rounded" id="user-@${id}" onclick="redirect('${id}')">
                       <div class="row">
@@ -68,6 +68,10 @@
                         </div>
                     </div>`+document.getElementById('all-users').innerHTML
               });
+
+              socket.on('alert', function (data) {
+                alert(data)
+              })
             }
         })();
     </script>

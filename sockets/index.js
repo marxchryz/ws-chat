@@ -23,6 +23,9 @@ module.exports = (client) => {
         );
       });
 
+      console.log(chats);
+
+      socket.join(roomId);
       socket.emit('showChat', { receiver, chats, first: true });
     });
 
@@ -49,15 +52,20 @@ module.exports = (client) => {
       let roomId = from > to ? from + to : to + from;
 
       socket.join(roomId);
+      // socket.join(receiver.username);
 
       // Send users and room info
       client.to(roomId).emit('showChat', { receiver, chats: [chat] });
 
       chat.message = from + ': ' + chat.message;
       socket.in(roomId).emit('newMessage', { receiver, sender, chats: [chat] });
+      socket
+        .in(receiver.username)
+        .emit('newMessage', { receiver, sender, chats: [chat] });
     });
 
     socket.on('viewAllUsers', async function (username) {
+      socket.join(username);
       let users = await User.find({ username: { $ne: username } });
       let current = await User.findOne({ username });
       users = users.map((user) => {
